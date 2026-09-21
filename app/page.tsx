@@ -107,7 +107,7 @@ export default function LogReaderApp() {
       {/* Header & Tabs */}
       <header className="flex items-center justify-between px-6 py-2 border-b bg-card">
         <div className="flex items-center gap-6 overflow-hidden">
-          <h1 className="text-lg font-semibold tracking-tight shrink-0">Log Reader</h1>
+          <h1 className="text-lg font-semibold tracking-tight shrink-0">Rosetta</h1>
           
           {/* Tab Bar */}
           <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-md border border-border/40 overflow-x-auto max-w-[60vw] scrollbar-thin">

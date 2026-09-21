@@ -86,7 +86,7 @@ export function AdvancedFiltersSheet({
                     <span className="text-xs text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
                     <Select 
                       value={metadataFilters[key] || 'ALL'} 
-                      onValueChange={(val) => setMetadataFilters(prev => ({...prev, [key]: val}))}
+                      onValueChange={(val) => setMetadataFilters(prev => ({...prev, [key]: val || 'ALL'}))}
                     >
                       <SelectTrigger className="w-full h-8 text-xs">
                         <SelectValue placeholder="All" />

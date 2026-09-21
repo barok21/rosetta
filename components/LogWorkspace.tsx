@@ -40,8 +40,7 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
   const [copied, setCopied] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Notify parent when a NEW file is loaded
-  const prevFilenameRef = useRef<string | undefined>();
+  const prevFilenameRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (fileMeta?.name && fileMeta.name !== prevFilenameRef.current && onSessionReady) {
       prevFilenameRef.current = fileMeta.name;

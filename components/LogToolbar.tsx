@@ -80,7 +80,7 @@ export function LogToolbar({
         {logs.length > 0 && (
           <>
             
-            <Select value={levelFilter} onValueChange={setLevelFilter}>
+            <Select value={levelFilter} onValueChange={(v) => setLevelFilter(v || 'ALL')}>
               <SelectTrigger className="w-[120px] h-8">
                 <SelectValue placeholder="All Levels" />
               </SelectTrigger>
@@ -94,7 +94,7 @@ export function LogToolbar({
               </SelectContent>
             </Select>
 
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v || 'ALL')}>
               <SelectTrigger className="w-[180px] h-8">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
@@ -137,7 +137,6 @@ export function LogToolbar({
                     mode="single"
                     selected={startDate}
                     onSelect={setStartDate}
-                    initialFocus
                   />
                 </PopoverContent>
               </Popover>
@@ -158,7 +157,6 @@ export function LogToolbar({
                     mode="single"
                     selected={endDate}
                     onSelect={setEndDate}
-                    initialFocus
                   />
                 </PopoverContent>
               </Popover>

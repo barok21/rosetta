@@ -308,6 +308,8 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
               onViewDetails={setSelectedLog}
               currentMatchIndex={currentMatchIndex}
               searchMatches={searchMatches}
+              currentPage={currentPage}
+              pageSize={1000}
             />
           </div>
         )}

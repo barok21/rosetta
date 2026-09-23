@@ -64,6 +64,8 @@ interface LogTableProps {
   onViewDetails: (log: LogEntry) => void;
   currentMatchIndex: number;
   searchMatches: number[];
+  currentPage: number;
+  pageSize: number;
 }
 
 export function LogTable({
@@ -73,7 +75,9 @@ export function LogTable({
   getLevelColor,
   onViewDetails,
   currentMatchIndex,
-  searchMatches
+  searchMatches,
+  currentPage,
+  pageSize
 }: LogTableProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -87,22 +91,26 @@ export function LogTable({
   // Scroll to search match
   useEffect(() => {
     if (searchMatches.length > 0 && searchQuery) {
-      const targetIdx = searchMatches[currentMatchIndex];
-      rowVirtualizer.scrollToIndex(targetIdx, { align: 'center' });
+      const absoluteIdx = searchMatches[currentMatchIndex];
+      const relativeIdx = absoluteIdx - (currentPage - 1) * pageSize;
       
-      // Add highlight flash
-      setTimeout(() => {
-        const log = logs[targetIdx];
-        if (log) {
-          const el = document.getElementById(`log-row-${log.lineNumber}`);
-          if (el) {
-            el.classList.add('bg-primary/20', 'transition-colors', 'duration-500');
-            setTimeout(() => el.classList.remove('bg-primary/20'), 1000);
+      if (relativeIdx >= 0 && relativeIdx < logs.length) {
+        rowVirtualizer.scrollToIndex(relativeIdx, { align: 'center' });
+        
+        // Add highlight flash
+        setTimeout(() => {
+          const log = logs[relativeIdx];
+          if (log) {
+            const el = document.getElementById(`log-row-${log.lineNumber}`);
+            if (el) {
+              el.classList.add('bg-primary/20', 'transition-colors', 'duration-500');
+              setTimeout(() => el.classList.remove('bg-primary/20'), 1000);
+            }
           }
-        }
-      }, 100);
+        }, 100);
+      }
     }
-  }, [currentMatchIndex, searchMatches, searchQuery, rowVirtualizer, logs]);
+  }, [currentMatchIndex, searchMatches, searchQuery, rowVirtualizer, logs, currentPage, pageSize]);
 
   return (
     <div 

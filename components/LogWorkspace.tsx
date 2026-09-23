@@ -301,7 +301,7 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
         ) : (
           <div className="flex-1 overflow-hidden flex flex-col">
             <LogTable 
-              logs={filteredLogs}
+              logs={currentLogs}
               searchQuery={searchQuery}
               isRegex={isRegex}
               getLevelColor={getLevelColor}
@@ -339,6 +339,26 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
             </div>
           )}
         </div>
+        
+        {logs.length > 0 && totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button 
+              className="px-2 py-1 bg-muted hover:bg-muted/80 rounded text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              Prev
+            </button>
+            <span className="font-medium whitespace-nowrap px-2">Page {currentPage} of {totalPages}</span>
+            <button 
+              className="px-2 py-1 bg-muted hover:bg-muted/80 rounded text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </footer>
 
       <LogDetailsModal 

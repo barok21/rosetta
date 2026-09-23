@@ -14,6 +14,31 @@ export interface LogEntry {
   rawPayload: Record<string, unknown> | null;
 }
 
+function extractLogfmt(str: string): Record<string, any> {
+  const logfmt: Record<string, any> = {};
+  let remainingStr = str;
+  const logMatch = str.match(/log="({.*?})"(?:\s[a-zA-Z0-9_.-]+=| \s*$|$)/);
+  if (logMatch) {
+    let val = logMatch[1];
+    try { logfmt.log = JSON.parse(val); } catch(e) { logfmt.log = val; }
+    remainingStr = str.replace(logMatch[0], '');
+  }
+  const regex = /([a-zA-Z0-9_.-]+)=("[^"]*"|[^ ]+)/g;
+  let match;
+  while ((match = regex.exec(remainingStr)) !== null) {
+    const key = match[1];
+    let val = match[2];
+    if (val.startsWith('"') && val.endsWith('"')) {
+      val = val.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    }
+    if (val.startsWith('{') || val.startsWith('[')) {
+      try { val = JSON.parse(val); } catch (e) {}
+    }
+    logfmt[key] = val;
+  }
+  return logfmt;
+}
+
 export function parseStructuredLog(lineStr: string, index: number): LogEntry {
   let parsed: LogEntry = {
     originalLine: lineStr,
@@ -26,102 +51,54 @@ export function parseStructuredLog(lineStr: string, index: number): LogEntry {
     rawPayload: null,
   };
 
-  try {
-    const logfmt: any = {};
-    let remainingStr = lineStr;
+  const trimLine = lineStr.trim();
+  let jsonPayload: any = null;
 
-    // First, extract the problematic `log="{...}"` field which contains unescaped quotes
-    const logMatch = lineStr.match(/log="({.*?})"(?:\s[a-zA-Z0-9_.-]+=| \s*$|$)/);
-    if (logMatch) {
-      let val = logMatch[1];
-      // Do not manually unescape here, let JSON.parse handle the standard stringified JSON
-      try {
-        logfmt.log = JSON.parse(val);
-      } catch(e) {
-        logfmt.log = val;
-      }
-      // Remove it from the string so we can parse the rest easily
-      remainingStr = lineStr.replace(logMatch[0], '');
+  if (trimLine.startsWith('{') || trimLine.startsWith('[')) {
+    try { jsonPayload = JSON.parse(trimLine); } catch(e) {}
+  }
+
+  if (jsonPayload && typeof jsonPayload === 'object') {
+    if (typeof jsonPayload.log === 'string' && jsonPayload.log.includes('=')) {
+       const logfmt = extractLogfmt(jsonPayload.log);
+       if (Object.keys(logfmt).length > 0) jsonPayload.parsedLog = logfmt;
     }
-
-    // Parse the remaining standard logfmt fields (e.g. compose_service="...", cluster="...")
-    const regex = /([a-zA-Z0-9_.-]+)=("[^"]*"|[^ ]+)/g;
-    let match;
-    let hasPairs = Object.keys(logfmt).length > 0;
-
-    while ((match = regex.exec(remainingStr)) !== null) {
-      hasPairs = true;
-      const key = match[1];
-      let val = match[2];
-      
-      if (val.startsWith('"') && val.endsWith('"')) {
-        val = val.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-      }
-      
-      if (val.startsWith('{') || val.startsWith('[')) {
-        try { val = JSON.parse(val); } catch (e) {}
-      }
-      
-      logfmt[key] = val;
-    }
-
-    if (hasPairs) {
-      // If logfmt.log itself contains another stringified 'log', unwrap it
-      if (logfmt.log && typeof logfmt.log === 'object' && typeof logfmt.log.log === 'string') {
-        try { logfmt.log.log = JSON.parse(logfmt.log.log); } catch(e) {}
-      }
-
+    parsed.rawPayload = jsonPayload;
+    const innerLog = jsonPayload.parsedLog || {};
+    parsed.timestamp = jsonPayload.timestamp || jsonPayload.time || innerLog.timestamp || innerLog.time || '-';
+    parsed.timeValue = parsed.timestamp !== '-' ? new Date(parsed.timestamp).getTime() : 0;
+    
+    let lvl = (jsonPayload.level || innerLog.level || 'unknown').toLowerCase();
+    if (lvl === 'warning') lvl = 'warn';
+    if (lvl === 'unknown' && jsonPayload.stream === 'stderr') lvl = 'error';
+    parsed.level = lvl;
+    
+    parsed.type = jsonPayload.type || innerLog.type || '-';
+    parsed.message = jsonPayload.detail ? JSON.stringify(jsonPayload.detail, null, 2) : 
+                     (jsonPayload.message || jsonPayload.msg || innerLog.message || innerLog.msg || (typeof jsonPayload.log === 'string' ? jsonPayload.log : JSON.stringify(jsonPayload, null, 2)));
+  } else {
+    const logfmt = extractLogfmt(lineStr);
+    if (Object.keys(logfmt).length > 0) {
       parsed.rawPayload = logfmt;
-      
-      let payload = logfmt;
-      if (logfmt.log && typeof logfmt.log === 'object') {
-        payload = logfmt.log;
-        if (payload.log && typeof payload.log === 'object') {
-          payload = payload.log;
-        }
-      }
-
-      parsed.timestamp = payload.timestamp || payload.time || logfmt.time || '-';
+      parsed.timestamp = logfmt.timestamp || logfmt.time || '-';
       parsed.timeValue = parsed.timestamp !== '-' ? new Date(parsed.timestamp).getTime() : 0;
-      
-      let lvl = (payload.level || 'unknown').toLowerCase();
+      let lvl = (logfmt.level || 'unknown').toLowerCase();
       if (lvl === 'warning') lvl = 'warn';
       parsed.level = lvl;
-      
-      parsed.type = payload.type || '-';
-      parsed.message = payload.detail ? JSON.stringify(payload.detail, null, 2) : (payload.message || payload.msg || JSON.stringify(payload, null, 2));
-
+      parsed.type = logfmt.type || '-';
+      parsed.message = logfmt.detail ? JSON.stringify(logfmt.detail, null, 2) : (logfmt.message || logfmt.msg || JSON.stringify(logfmt, null, 2));
     } else {
-      // Fallback: try parsing line as pure JSON
-      try {
-        const json = JSON.parse(lineStr);
-        parsed.rawPayload = json;
-        parsed.timestamp = json.timestamp || json.time || '-';
-        parsed.timeValue = parsed.timestamp !== '-' ? new Date(parsed.timestamp).getTime() : 0;
-        
-        let lvl = (json.level || 'unknown').toLowerCase();
-        if (lvl === 'warning') lvl = 'warn';
-        if (lvl === 'unknown' && json.stream === 'stderr') lvl = 'error';
-        parsed.level = lvl;
-        
-        parsed.type = json.type || '-';
-        parsed.message = json.detail ? JSON.stringify(json.detail, null, 2) : (json.message || json.msg || JSON.stringify(json, null, 2));
-      } catch(e) {
-        parsed.message = lineStr;
-        parsed.rawPayload = { raw: lineStr };
-      }
+      parsed.message = lineStr;
+      parsed.rawPayload = { raw: lineStr };
     }
+  }
 
-    // Fallback level detection
-    if (parsed.level === 'unknown') {
-      if (lineStr.match(/\bERROR\b/i)) parsed.level = 'error';
-      else if (lineStr.match(/\bWARN\b/i)) parsed.level = 'warn';
-      else if (lineStr.match(/\bINFO\b/i)) parsed.level = 'info';
-      else if (lineStr.match(/\bDEBUG\b/i)) parsed.level = 'debug';
-      else if (lineStr.match(/\bFATAL\b/i)) parsed.level = 'fatal';
-    }
-  } catch (e) {
-    parsed.message = lineStr;
+  if (parsed.level === 'unknown') {
+    if (lineStr.match(/\bERROR\b/i)) parsed.level = 'error';
+    else if (lineStr.match(/\bWARN\b/i) || lineStr.match(/\bWARNING\b/i)) parsed.level = 'warn';
+    else if (lineStr.match(/\bINFO\b/i)) parsed.level = 'info';
+    else if (lineStr.match(/\bDEBUG\b/i)) parsed.level = 'debug';
+    else if (lineStr.match(/\bFATAL\b/i)) parsed.level = 'fatal';
   }
 
   return parsed;
@@ -162,9 +139,10 @@ export function useLogFile(initialFile: File | null = null) {
       const text = event.target?.result as string;
       const lines = text.split(/\r?\n/);
       
-      const displayLines = lines.slice(0, 50000);
+      // We filter out any empty trailing lines
+      const displayLines = lines.filter(line => line.trim().length > 0);
       
-      setLoadingStatus(`Parsing ${file.name} in background...`);
+      setLoadingStatus(`Parsing ${displayLines.length.toLocaleString()} lines in background...`);
       
       // Instantiate Web Worker
       const worker = new Worker(new URL('../workers/logParser.worker.ts', import.meta.url));

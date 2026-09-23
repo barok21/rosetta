@@ -44,13 +44,14 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
     startDate, setStartDate,
     endDate, setEndDate,
     currentPage, setCurrentPage, totalPages,
-    uniqueTypes, metadataKeys, uniqueMetadataValues,
+    uniqueTypes, uniqueStatuses, metadataKeys, uniqueMetadataValues,
     metadataFilters, setMetadataFilters,
     isRegex, setIsRegex,
     excludeQuery, setExcludeQuery,
     searchOperator, setSearchOperator,
     currentMatchIndex, setCurrentMatchIndex,
     searchMatches,
+    statusFilter, setStatusFilter,
     levelStats,
     filteredLogs, currentLogs,
     handleFileUpload, clearLog, clearFilters
@@ -247,6 +248,9 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
           typeFilter={typeFilter}
           setTypeFilter={setTypeFilter}
           uniqueTypes={uniqueTypes}
+          uniqueStatuses={uniqueStatuses}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
           startDate={startDate}
           setStartDate={setStartDate}
           endDate={endDate}

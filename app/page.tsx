@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import React from "react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@wrksz/themes/client";
 import { buttonVariants, Button } from "@/components/ui/button";
 import { Upload, Moon, Sun, Monitor, X, Plus } from "lucide-react";
 import { LogWorkspace } from "@/components/LogWorkspace";

@@ -7,6 +7,7 @@ export interface LogEntry {
   timeValue: number;
   level: LogLevel;
   type: string;
+  status: string;
   message: string;
   rawPayload: Record<string, unknown> | null;
 }
@@ -19,6 +20,7 @@ export function parseStructuredLog(lineStr: string, index: number): LogEntry {
     timeValue: 0,
     level: 'unknown',
     type: '-',
+    status: '-',
     message: '',
     rawPayload: null,
   };
@@ -86,6 +88,7 @@ export function parseStructuredLog(lineStr: string, index: number): LogEntry {
       parsed.level = lvl;
       
       parsed.type = payload.type || '-';
+      parsed.status = payload.detail?.http_info?.status?.toString() || payload.status?.toString() || '-';
       parsed.message = payload.detail ? JSON.stringify(payload.detail, null, 2) : (payload.message || payload.msg || JSON.stringify(payload, null, 2));
 
     } else {
@@ -102,6 +105,7 @@ export function parseStructuredLog(lineStr: string, index: number): LogEntry {
         parsed.level = lvl;
         
         parsed.type = json.type || '-';
+        parsed.status = json.detail?.http_info?.status?.toString() || json.status?.toString() || '-';
         parsed.message = json.detail ? JSON.stringify(json.detail, null, 2) : (json.message || json.msg || JSON.stringify(json, null, 2));
       } catch(e) {
         parsed.message = lineStr;

@@ -10,6 +10,7 @@ export interface LogEntry {
   timeValue: number;
   level: LogLevel;
   type: string;
+  status: string;
   message: string;
   rawPayload: Record<string, unknown> | null;
 }
@@ -47,6 +48,7 @@ export function parseStructuredLog(lineStr: string, index: number): LogEntry {
     timeValue: 0,
     level: 'unknown',
     type: '-',
+    status: '-',
     message: '',
     rawPayload: null,
   };
@@ -112,6 +114,7 @@ export function useLogFile(initialFile: File | null = null) {
   // Filters
   const [levelFilter, setLevelFilter] = useState('ALL');
   const [typeFilter, setTypeFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
@@ -179,6 +182,7 @@ export function useLogFile(initialFile: File | null = null) {
     setLoadingStatus(null);
     setLevelFilter('ALL');
     setTypeFilter('ALL');
+    setStatusFilter('ALL');
     setSearchQuery('');
     setStartDate(undefined);
     setEndDate(undefined);
@@ -192,6 +196,7 @@ export function useLogFile(initialFile: File | null = null) {
   const clearFilters = useCallback(() => {
     setLevelFilter('ALL');
     setTypeFilter('ALL');
+    setStatusFilter('ALL');
     setSearchQuery('');
     setStartDate(undefined);
     setEndDate(undefined);
@@ -204,10 +209,12 @@ export function useLogFile(initialFile: File | null = null) {
 
   const metadataInfo = useMemo(() => {
     const types = new Set<string>();
+    const statuses = new Set<string>();
     const metaVals: Record<string, Set<string>> = {};
     
     logs.forEach(log => {
       if (log.type && log.type !== '-') types.add(log.type);
+      if (log.status && log.status !== '-') statuses.add(log.status);
       
       if (log.rawPayload && typeof log.rawPayload === 'object' && !Array.isArray(log.rawPayload)) {
         Object.entries(log.rawPayload).forEach(([k, v]) => {
@@ -228,11 +235,12 @@ export function useLogFile(initialFile: File | null = null) {
     
     return {
       uniqueTypes: Array.from(types).sort(),
+      uniqueStatuses: Array.from(statuses).sort(),
       metadataKeys: Object.keys(uniqueMeta).sort(),
       uniqueMetadataValues: uniqueMeta
     };
   }, [logs]);
-  const { uniqueTypes, metadataKeys, uniqueMetadataValues } = metadataInfo;
+  const { uniqueTypes, uniqueStatuses, metadataKeys, uniqueMetadataValues } = metadataInfo;
 
   const filteredLogs = useMemo(() => {
     const sDate = startDate ? startDate.getTime() : null;
@@ -249,6 +257,7 @@ export function useLogFile(initialFile: File | null = null) {
     return logs.filter(log => {
       if (l !== 'all' && !log.level.includes(l)) return false;
       if (typeFilter !== 'ALL' && log.type !== typeFilter) return false;
+      if (statusFilter !== 'ALL' && log.status !== statusFilter) return false;
       if (sDate && eDate && log.timeValue > 0) {
         if (log.timeValue < sDate || log.timeValue > eDate) return false;
       }
@@ -274,7 +283,7 @@ export function useLogFile(initialFile: File | null = null) {
       
       return true;
     });
-  }, [logs, levelFilter, typeFilter, startDate, endDate, isRegex, excludeQuery, metadataFilters]);
+  }, [logs, levelFilter, typeFilter, statusFilter, startDate, endDate, isRegex, excludeQuery, metadataFilters]);
 
   const debouncedSearchQuery = useDebounce(searchQuery, 250);
 
@@ -346,11 +355,12 @@ export function useLogFile(initialFile: File | null = null) {
     loadingStatus,
     levelFilter, setLevelFilter,
     typeFilter, setTypeFilter,
+    statusFilter, setStatusFilter,
     searchQuery, setSearchQuery,
     startDate, setStartDate,
     endDate, setEndDate,
     currentPage, setCurrentPage, totalPages,
-    uniqueTypes, metadataKeys, uniqueMetadataValues,
+    uniqueTypes, uniqueStatuses, metadataKeys, uniqueMetadataValues,
     metadataFilters, setMetadataFilters,
     isRegex, setIsRegex,
     excludeQuery, setExcludeQuery,

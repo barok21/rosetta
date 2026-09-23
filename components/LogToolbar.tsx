@@ -14,7 +14,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Search, Upload, X, Settings2, Calendar as CalendarIcon, Download, AlertCircle, AlertTriangle, Info, Bug, Skull, ListFilter, Tag, Database, Globe, Server, Lock } from "lucide-react";
+import { Activity, Search, Upload, X, Settings2, Calendar as CalendarIcon, Download, AlertCircle, AlertTriangle, Info, Bug, Skull, ListFilter, Tag, Database, Globe, Server, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { type DateRange } from "react-day-picker";
 import { cn } from "cn";
@@ -27,6 +27,9 @@ interface LogToolbarProps {
   typeFilter: string;
   setTypeFilter: (v: string) => void;
   uniqueTypes: string[];
+  statusFilter: string;
+  setStatusFilter: (v: string) => void;
+  uniqueStatuses: string[];
   startDate: Date | undefined;
   setStartDate: (d: Date | undefined) => void;
   endDate: Date | undefined;
@@ -55,6 +58,9 @@ export function LogToolbar({
   typeFilter,
   setTypeFilter,
   uniqueTypes,
+  statusFilter,
+  setStatusFilter,
+  uniqueStatuses,
   startDate,
   setStartDate,
   endDate,
@@ -118,6 +124,25 @@ export function LogToolbar({
                     </SelectItem>
                   );
                 })}
+              </SelectContent>
+            </Select>
+
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v || 'ALL')}>
+              <SelectTrigger className="w-[140px] h-8 bg-background border-input hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Activity size={14} className="opacity-70" />
+                  <span className="font-medium text-foreground truncate flex-1 text-left">
+                    {statusFilter === 'ALL' ? 'All Statuses' : statusFilter}
+                  </span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Statuses</SelectItem>
+                {uniqueStatuses.map(s => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 

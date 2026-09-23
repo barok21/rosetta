@@ -236,7 +236,7 @@ export function useLogFile(initialFile: File | null = null) {
 
   const filteredLogs = useMemo(() => {
     const sDate = startDate ? startDate.getTime() : null;
-    const eDate = endDate ? endDate.getTime() : null;
+    const eDate = endDate ? new Date(endDate).setHours(23, 59, 59, 999) : null;
     const l = levelFilter.toLowerCase();
     
     let excludeRegex: RegExp | null = null;
@@ -249,8 +249,9 @@ export function useLogFile(initialFile: File | null = null) {
     return logs.filter(log => {
       if (l !== 'all' && !log.level.includes(l)) return false;
       if (typeFilter !== 'ALL' && log.type !== typeFilter) return false;
-      if (sDate && log.timeValue > 0 && log.timeValue < sDate) return false;
-      if (eDate && log.timeValue > 0 && log.timeValue > eDate) return false;
+      if (sDate && eDate && log.timeValue > 0) {
+        if (log.timeValue < sDate || log.timeValue > eDate) return false;
+      }
       
       for (const [mk, mv] of Object.entries(metadataFilters)) {
         if (mv !== 'ALL') {

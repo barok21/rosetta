@@ -16,6 +16,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Search, Upload, X, Settings2, Calendar as CalendarIcon, Download, AlertCircle, AlertTriangle, Info, Bug, Skull, ListFilter, Tag, Database, Globe, Server, Lock } from "lucide-react";
 import { format } from "date-fns";
+import { type DateRange } from "react-day-picker";
 import { cn } from "cn";
 import { LogEntry } from "@/hooks/useLogFile";
 
@@ -125,38 +126,34 @@ export function LogToolbar({
                 <PopoverTrigger
                   className={cn(
                     buttonVariants({ variant: "outline", size: "sm" }),
-                    "h-8 justify-start text-left font-normal rounded-r-none",
+                    "h-8 justify-start text-left font-normal",
                     !startDate && "text-muted-foreground"
                   )}
                 >
                   <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                  {startDate ? format(startDate, "MMM d, HH:mm") : <span>Start</span>}
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                  />
-                </PopoverContent>
-              </Popover>
-              <div className="h-8 flex items-center px-2 bg-muted/30 border-y border-input text-xs text-muted-foreground">to</div>
-              <Popover>
-                <PopoverTrigger
-                  className={cn(
-                    buttonVariants({ variant: "outline", size: "sm" }),
-                    "h-8 justify-start text-left font-normal rounded-l-none border-l-0",
-                    !endDate && "text-muted-foreground"
+                  {startDate ? (
+                    endDate ? (
+                      <>
+                        {format(startDate, "LLL dd, y")} -{" "}
+                        {format(endDate, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(startDate, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date range</span>
                   )}
-                >
-                  <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                  {endDate ? format(endDate, "MMM d, HH:mm") : <span>End</span>}
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
+                    mode="range"
+                    defaultMonth={startDate}
+                    selected={{ from: startDate, to: endDate }}
+                    onSelect={(range: DateRange | undefined) => {
+                      setStartDate(range?.from);
+                      setEndDate(range?.to);
+                    }}
+                    numberOfMonths={2}
                   />
                 </PopoverContent>
               </Popover>

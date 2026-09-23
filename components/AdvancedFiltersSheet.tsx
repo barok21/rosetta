@@ -68,17 +68,19 @@ export function AdvancedFiltersSheet({
     <Drawer
       open={showAdvanced}
       onOpenChange={setShowAdvanced}
-      showSwipeHandle={isMobile}
+      showSwipeHandle={false}
       swipeDirection={isMobile ? "down" : "right"}
     >
-      <DrawerContent className="sm:!inset-y-6 sm:!inset-x-auto sm:!right-6 sm:!h-[calc(100dvh-3rem)] sm:max-w-md sm:rounded-2xl sm:border shadow-2xl">
+      <DrawerContent 
+        className="sm:!inset-y-6 sm:!inset-x-auto sm:!right-6 sm:!h-[calc(100dvh-3rem)] sm:max-w-md sm:rounded-2xl sm:border shadow-2xl"
+      >
         <DrawerHeader className="text-left border-b">
           <DrawerTitle>Advanced Filters</DrawerTitle>
           <DrawerDescription>
             Configure complex filtering conditions and metadata criteria.
           </DrawerDescription>
         </DrawerHeader>
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 scrollbar-none">
           <div className="flex flex-col gap-6">
             <div className="space-y-4">
               <h3 className="text-sm font-semibold tracking-tight">Search Operator</h3>

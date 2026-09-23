@@ -34,7 +34,7 @@ export function LogDetailsModal({
     <Drawer 
       open={!!selectedLog} 
       onOpenChange={(open) => !open && setSelectedLog(null)}
-      showSwipeHandle={isMobile}
+      showSwipeHandle={false}
       swipeDirection={isMobile ? "down" : "right"}
     >
       <DrawerContent 
@@ -55,7 +55,7 @@ export function LogDetailsModal({
             </Button>
           </div>
         </DrawerHeader>
-        <div className="flex-1 overflow-y-auto p-6 bg-muted/10">
+        <div className="flex-1 overflow-y-auto p-6 bg-muted/10 scrollbar-none">
           <div className="bg-card border rounded-md p-4 min-h-full">
             {selectedLog && (
               <JsonViewer 

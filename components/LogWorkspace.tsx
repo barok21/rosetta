@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useLogFile, LogEntry } from "@/hooks/useLogFile";
 import { buttonVariants } from "@/components/ui/button";
-import { FileText, Upload } from "lucide-react";
+import { FileText, Upload, Search } from "lucide-react";
 
 import { LogTable } from "@/components/LogTable";
 import { LogToolbar } from "@/components/LogToolbar";
@@ -39,6 +39,9 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [copied, setCopied] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // Selection Tooltip State
+  const [selectionTooltip, setSelectionTooltip] = useState<{ x: number, y: number, text: string } | null>(null);
 
   const prevFilenameRef = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -48,22 +51,68 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
     }
   }, [fileMeta?.name, onSessionReady]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts and Selection logic
   useEffect(() => {
     if (!isActive) return;
-    const handler = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
+        
+        const selection = window.getSelection()?.toString().trim();
+        if (selection) {
+          setSearchQuery(selection);
+        }
+        
         searchInputRef.current?.focus();
       }
       if (e.key === 'Escape') {
         if (selectedLog) setSelectedLog(null);
         else if (showAdvanced) setShowAdvanced(false);
+        setSelectionTooltip(null);
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [isActive, selectedLog, showAdvanced]);
+    
+    const handleMouseUp = (e: MouseEvent) => {
+      setTimeout(() => {
+        const selection = window.getSelection();
+        const text = selection?.toString().trim();
+        if (text && text.length > 0 && selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          
+          if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+            setSelectionTooltip(null);
+            return;
+          }
+
+          setSelectionTooltip({
+            x: rect.left + rect.width / 2,
+            y: rect.top - 8,
+            text
+          });
+        } else {
+          setSelectionTooltip(null);
+        }
+      }, 10);
+    };
+
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (!selection || !selection.toString().trim()) {
+        setSelectionTooltip(null);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('selectionchange', handleSelectionChange);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
+  }, [isActive, selectedLog, showAdvanced, setSearchQuery]);
 
   const handleCopyPayload = useCallback(() => {
     if (!selectedLog) return;
@@ -231,6 +280,24 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
               />
             </div>
           </div>
+        ) : (filteredLogs.length === 0 || (searchQuery && searchMatches.length === 0)) ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/10 p-6 text-center animate-in fade-in zoom-in-95 duration-300 z-10">
+            <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mb-4 text-muted-foreground shadow-inner border border-border/50">
+              <Search size={32} />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">No matches found</h3>
+            <p className="text-muted-foreground text-sm max-w-sm mb-6">
+              {searchQuery && searchMatches.length === 0 
+                ? `We couldn't find any logs matching "${searchQuery}".`
+                : "We couldn't find any logs matching your current active filters."}
+            </p>
+            <button 
+              onClick={clearFilters}
+              className={buttonVariants({ variant: "outline", className: "shadow-sm hover:shadow" })}
+            >
+              Clear all filters
+            </button>
+          </div>
         ) : (
           <div className="flex-1 overflow-hidden flex flex-col">
             <LogTable 
@@ -282,6 +349,24 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
         copied={copied}
         handleCopyPayload={handleCopyPayload}
       />
+      
+      {/* Floating Selection Tooltip */}
+      {selectionTooltip && (
+        <div 
+          className="fixed z-[100] transform -translate-x-1/2 -translate-y-full bg-primary text-primary-foreground px-3 py-1.5 rounded shadow-lg text-xs font-medium flex items-center gap-2 cursor-pointer hover:bg-primary/90 animate-in fade-in zoom-in-95 duration-200"
+          style={{ left: selectionTooltip.x, top: selectionTooltip.y }}
+          onClick={() => {
+            setSearchQuery(selectionTooltip.text);
+            searchInputRef.current?.focus();
+            setSelectionTooltip(null);
+            window.getSelection()?.removeAllRanges();
+          }}
+        >
+          <Search size={12} />
+          <span>Search for "{selectionTooltip.text.length > 15 ? selectionTooltip.text.substring(0, 15) + '...' : selectionTooltip.text}"</span>
+          <span className="opacity-60 text-[10px] ml-1 border-l border-primary-foreground/30 pl-2 hidden sm:inline-block">Ctrl+F</span>
+        </div>
+      )}
     </div>
   );
 }

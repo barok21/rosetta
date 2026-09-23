@@ -80,9 +80,13 @@ export function parseStructuredLog(lineStr: string, index: number): LogEntry {
 
       parsed.timestamp = payload.timestamp || payload.time || logfmt.time || '-';
       parsed.timeValue = parsed.timestamp !== '-' ? new Date(parsed.timestamp).getTime() : 0;
-      parsed.level = payload.level ? payload.level.toLowerCase() : 'unknown';
+      
+      let lvl = (payload.level || 'unknown').toLowerCase();
+      if (lvl === 'warning') lvl = 'warn';
+      parsed.level = lvl;
+      
       parsed.type = payload.type || '-';
-      parsed.message = payload.detail ? JSON.stringify(payload.detail, null, 2) : (payload.message || JSON.stringify(payload, null, 2));
+      parsed.message = payload.detail ? JSON.stringify(payload.detail, null, 2) : (payload.message || payload.msg || JSON.stringify(payload, null, 2));
 
     } else {
       // Fallback: try parsing line as pure JSON
@@ -91,9 +95,14 @@ export function parseStructuredLog(lineStr: string, index: number): LogEntry {
         parsed.rawPayload = json;
         parsed.timestamp = json.timestamp || json.time || '-';
         parsed.timeValue = parsed.timestamp !== '-' ? new Date(parsed.timestamp).getTime() : 0;
-        parsed.level = json.level ? json.level.toLowerCase() : 'unknown';
+        
+        let lvl = (json.level || 'unknown').toLowerCase();
+        if (lvl === 'warning') lvl = 'warn';
+        if (lvl === 'unknown' && json.stream === 'stderr') lvl = 'error';
+        parsed.level = lvl;
+        
         parsed.type = json.type || '-';
-        parsed.message = json.detail ? JSON.stringify(json.detail, null, 2) : (json.message || JSON.stringify(json, null, 2));
+        parsed.message = json.detail ? JSON.stringify(json.detail, null, 2) : (json.message || json.msg || JSON.stringify(json, null, 2));
       } catch(e) {
         parsed.message = lineStr;
         parsed.rawPayload = { raw: lineStr };

@@ -4,9 +4,30 @@ import { buttonVariants } from "@/components/ui/button";
 import { FileText, Upload, Search } from "lucide-react";
 
 import { LogTable } from "@/components/LogTable";
+import { cn } from "@/lib/utils";
 import { LogToolbar } from "@/components/LogToolbar";
 import { AdvancedFiltersSheet } from "@/components/AdvancedFiltersSheet";
 import { LogDetailsModal } from "@/components/LogDetailsModal";
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentMedia,
+  AttachmentTitle,
+  AttachmentTrigger
+} from "@/components/ui/attachment";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react";
 
 interface LogWorkspaceProps {
   sessionFile: File | null;
@@ -39,6 +60,7 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [copied, setCopied] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   // Selection Tooltip State
   const [selectionTooltip, setSelectionTooltip] = useState<{ x: number, y: number, text: string } | null>(null);
@@ -197,6 +219,23 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
     e.target.value = '';
   };
 
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const onDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileUpload(file);
+  }, [handleFileUpload]);
+
   return (
     <div className={isActive ? "flex-1 flex flex-col overflow-hidden bg-background relative" : "hidden"}>
       {/* Toolbar */}
@@ -246,31 +285,70 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-hidden relative flex flex-col bg-background">
-        {loadingStatus ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p>{loadingStatus}</p>
-          </div>
-        ) : logs.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-muted/10 p-6">
-            <div className="max-w-md w-full flex flex-col items-center justify-center p-12 border-2 border-dashed border-primary/30 rounded-3xl bg-card/50 backdrop-blur-sm shadow-sm hover:shadow-xl transition-all duration-300 hover:border-primary/60 relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-              
-              <div className="relative z-10 w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform duration-500 ease-out shadow-inner">
-                <FileText size={48} className="drop-shadow-md opacity-80 group-hover:opacity-100 transition-opacity" />
-              </div>
-              
-              <h2 className="relative z-10 text-2xl font-bold text-foreground mb-3 tracking-tight group-hover:text-primary transition-colors duration-300">No Log File Imported</h2>
-              <p className="relative z-10 text-muted-foreground text-center mb-8 text-sm leading-relaxed">
-                Select a local <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded text-foreground/80 font-medium">.log</span> or <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded text-foreground/80 font-medium">.txt</span> file to instantly visualize, filter, and analyze your structured log data.
-              </p>
-              
-              <div className="relative z-10">
-                <label htmlFor={`fileInputEmpty-${sessionFile?.name || 'new'}`} className={buttonVariants({ size: "lg", className: "cursor-pointer shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all duration-300 rounded-full px-8 font-semibold tracking-wide" })}>
-                  <Upload className="mr-2 h-5 w-5" /> Browse Files
-                </label>
-              </div>
-              
+        {logs.length === 0 || loadingStatus ? (
+          <div 
+            className="absolute inset-0 flex items-center justify-center bg-muted/10 p-6"
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+          >
+            <div className="mx-auto w-full max-w-sm">
+              <Attachment 
+                className={cn(
+                  "w-full relative shadow-sm transition-colors bg-card",
+                  isDragging ? "border-primary border-2 scale-105 shadow-primary/20" : "hover:border-primary/50"
+                )}
+                state={loadingStatus ? "processing" : "idle"}
+              >
+                <AttachmentMedia className="h-10 w-10">
+                  {loadingStatus ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+                  ) : (
+                    <FileText className="text-primary" />
+                  )}
+                </AttachmentMedia>
+                <AttachmentContent>
+                  <AttachmentTitle>{loadingStatus ? "Processing Log File..." : "Import Log File"}</AttachmentTitle>
+                  <AttachmentDescription>
+                    {loadingStatus ? loadingStatus : "Click to browse .log or .txt files"}
+                  </AttachmentDescription>
+                </AttachmentContent>
+                <AttachmentActions>
+                  {!loadingStatus && (
+                    <AttachmentAction aria-label="Upload File">
+                      <Upload />
+                    </AttachmentAction>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger 
+                      render={
+                        <AttachmentAction aria-label="More options">
+                          <MoreVertical size={16} />
+                        </AttachmentAction>
+                      } 
+                    />
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuGroup>
+                        <DropdownMenuLabel>Options</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem>Load Sample Data</DropdownMenuItem>
+                        <DropdownMenuItem>View Documentation</DropdownMenuItem>
+                      </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </AttachmentActions>
+                {!loadingStatus && (
+                  <AttachmentTrigger 
+                    render={
+                      <label 
+                        htmlFor={`fileInputEmpty-${sessionFile?.name || 'new'}`} 
+                        className="cursor-pointer"
+                        aria-label="Browse for log files" 
+                      />
+                    } 
+                  />
+                )}
+              </Attachment>
               <input 
                 type="file" 
                 id={`fileInputEmpty-${sessionFile?.name || 'new'}`}

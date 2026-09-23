@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +11,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { X } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+  FieldTitle,
+} from "@/components/ui/field";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface AdvancedFiltersSheetProps {
   showAdvanced: boolean;
@@ -35,76 +55,115 @@ export function AdvancedFiltersSheet({
   metadataFilters,
   setMetadataFilters
 }: AdvancedFiltersSheetProps) {
-  if (!showAdvanced) return null;
+  const isMobile = useIsMobile();
+
+  function handleClearFilters() {
+    setSearchOperator('AND');
+    setExcludeQuery('');
+    setMetadataFilters({});
+    setShowAdvanced(false);
+  }
 
   return (
-    <>
-      <div 
-        className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] animate-in fade-in-0 duration-300"
-        onClick={() => setShowAdvanced(false)}
-      />
-      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-background border-l shadow-2xl overflow-y-auto animate-in slide-in-from-right-full duration-300 flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-lg font-semibold tracking-tight">Advanced Filters</h2>
-          <Button variant="ghost" size="icon" onClick={() => setShowAdvanced(false)}>
-            <X size={16} />
-          </Button>
-        </div>
-        
-        <div className="flex flex-col gap-6 p-6">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-muted-foreground">Search Operator</span>
-            <Select value={searchOperator} onValueChange={(v: any) => setSearchOperator(v)}>
-              <SelectTrigger className="w-full h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="AND">Match ALL terms (AND)</SelectItem>
-                <SelectItem value="OR">Match ANY term (OR)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+    <Drawer
+      open={showAdvanced}
+      onOpenChange={setShowAdvanced}
+      showSwipeHandle={isMobile}
+      swipeDirection={isMobile ? "down" : "right"}
+    >
+      <DrawerContent className="sm:!inset-y-6 sm:!inset-x-auto sm:!right-6 sm:!h-[calc(100dvh-3rem)] sm:max-w-md sm:rounded-2xl sm:border shadow-2xl">
+        <DrawerHeader className="text-left border-b">
+          <DrawerTitle>Advanced Filters</DrawerTitle>
+          <DrawerDescription>
+            Configure complex filtering conditions and metadata criteria.
+          </DrawerDescription>
+        </DrawerHeader>
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex flex-col gap-6">
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold tracking-tight">Search Operator</h3>
+              <RadioGroup
+                value={searchOperator}
+                onValueChange={(v: 'AND' | 'OR') => setSearchOperator(v)}
+                className="gap-2"
+              >
+                <FieldLabel htmlFor="operator-and">
+                  <Field orientation="horizontal" className="cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors">
+                    <FieldContent>
+                      <FieldTitle className="flex items-center gap-2">
+                        Match ALL terms
+                      </FieldTitle>
+                      <FieldDescription>Returns logs that match every search term (AND)</FieldDescription>
+                    </FieldContent>
+                    <RadioGroupItem value="AND" id="operator-and" />
+                  </Field>
+                </FieldLabel>
+                
+                <FieldLabel htmlFor="operator-or">
+                  <Field orientation="horizontal" className="cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors">
+                    <FieldContent>
+                      <FieldTitle className="flex items-center gap-2">
+                        Match ANY term
+                      </FieldTitle>
+                      <FieldDescription>Returns logs matching at least one search term (OR)</FieldDescription>
+                    </FieldContent>
+                    <RadioGroupItem value="OR" id="operator-or" />
+                  </Field>
+                </FieldLabel>
+              </RadioGroup>
+            </div>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-muted-foreground">Exclude Terms</span>
-            <Input 
-              placeholder="Hide logs containing..." 
-              className="w-full h-9" 
-              value={excludeQuery}
-              onChange={e => setExcludeQuery(e.target.value)}
-            />
-          </div>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold tracking-tight">Exclude Terms</h3>
+              <Input 
+                placeholder="Hide logs containing... (e.g. timeout)" 
+                className="w-full" 
+                value={excludeQuery}
+                onChange={e => setExcludeQuery(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Logs containing these exact terms will be hidden from the view.
+              </p>
+            </div>
 
-          {metadataKeys.length > 0 && (
-            <>
-              <div className="h-px w-full bg-border my-2"></div>
-              <span className="text-sm font-medium text-muted-foreground">Metadata Fields</span>
-              
-              <div className="grid grid-cols-2 gap-3">
-                {metadataKeys.map(key => (
-                  <div key={key} className="flex flex-col gap-1.5">
-                    <span className="text-xs text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
-                    <Select 
-                      value={metadataFilters[key] || 'ALL'} 
-                      onValueChange={(val) => setMetadataFilters(prev => ({...prev, [key]: val || 'ALL'}))}
-                    >
-                      <SelectTrigger className="w-full h-8 text-xs">
-                        <SelectValue placeholder="All" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ALL">All</SelectItem>
-                        {uniqueMetadataValues[key]?.map(v => (
-                          <SelectItem key={v} value={v}>{v}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+            {metadataKeys.length > 0 && (
+              <>
+                <div className="h-px w-full bg-border my-2"></div>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold tracking-tight">Metadata Fields</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {metadataKeys.map(key => (
+                      <div key={key} className="flex flex-col gap-1.5">
+                        <span className="text-xs font-medium text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
+                        <Select 
+                          value={metadataFilters[key] || 'ALL'} 
+                          onValueChange={(val) => setMetadataFilters(prev => ({...prev, [key]: val || 'ALL'}))}
+                        >
+                          <SelectTrigger className="w-full text-xs h-9">
+                            <SelectValue placeholder="All" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ALL">All</SelectItem>
+                            {uniqueMetadataValues[key]?.map(v => (
+                              <SelectItem key={v} value={v}>{v}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </>
-          )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
-    </>
+        <DrawerFooter className="border-t flex flex-row gap-2 justify-end p-4">
+          <Button variant="outline" onClick={handleClearFilters} className="w-full sm:w-auto h-9 text-xs">
+            Clear Filters
+          </Button>
+          <DrawerClose render={<Button className="w-full sm:w-auto h-9 text-xs">Apply Filters</Button>} />
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

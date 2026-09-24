@@ -1,13 +1,20 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useLogFile, LogEntry } from "@/hooks/useLogFile";
 import { buttonVariants } from "@/components/ui/button";
-import { FileText, Upload, Search } from "lucide-react";
+import { FileText, Upload, Search, ArrowRightLeft } from "lucide-react";
 
 import { LogTable } from "@/components/LogTable";
 import { cn } from "@/lib/utils";
 import { LogToolbar } from "@/components/LogToolbar";
 import { AdvancedFiltersSheet } from "@/components/AdvancedFiltersSheet";
 import { LogDetailsModal } from "@/components/LogDetailsModal";
+import { Base64ConverterModal } from "@/components/Base64ConverterModal";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import {
   Attachment,
   AttachmentAction,
@@ -62,6 +69,8 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
   const [copied, setCopied] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [base64ConverterOpen, setBase64ConverterOpen] = useState(false);
+  const [base64ConverterText, setBase64ConverterText] = useState("");
   
   // Selection Tooltip State
   const [selectionTooltip, setSelectionTooltip] = useState<{ x: number, y: number, text: string } | null>(null);
@@ -381,19 +390,37 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
             </button>
           </div>
         ) : (
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <LogTable 
-              logs={currentLogs}
-              searchQuery={searchQuery}
-              isRegex={isRegex}
-              getLevelColor={getLevelColor}
-              onViewDetails={setSelectedLog}
-              currentMatchIndex={currentMatchIndex}
-              searchMatches={searchMatches}
-              currentPage={currentPage}
-              pageSize={1000}
-            />
-          </div>
+          <ContextMenu>
+            <ContextMenuTrigger asChild>
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <LogTable 
+                  logs={currentLogs}
+                  searchQuery={searchQuery}
+                  isRegex={isRegex}
+                  getLevelColor={getLevelColor}
+                  onViewDetails={setSelectedLog}
+                  currentMatchIndex={currentMatchIndex}
+                  searchMatches={searchMatches}
+                  currentPage={currentPage}
+                  pageSize={1000}
+                />
+              </div>
+            </ContextMenuTrigger>
+            <ContextMenuContent className="w-64">
+              <ContextMenuItem 
+                onClick={() => {
+                  const selected = window.getSelection()?.toString();
+                  if (selected) {
+                    setBase64ConverterText(selected);
+                    setBase64ConverterOpen(true);
+                  }
+                }}
+              >
+                <ArrowRightLeft className="mr-2 h-4 w-4" />
+                Convert Base64 from Selection
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
         )}
       </main>
 
@@ -452,6 +479,12 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
         isRegex={isRegex}
         copied={copied}
         handleCopyPayload={handleCopyPayload}
+      />
+
+      <Base64ConverterModal
+        isOpen={base64ConverterOpen}
+        onOpenChange={setBase64ConverterOpen}
+        initialText={base64ConverterText}
       />
       
       {/* Floating Selection Tooltip */}

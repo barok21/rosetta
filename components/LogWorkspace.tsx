@@ -9,6 +9,13 @@ import { LogToolbar } from "@/components/LogToolbar";
 import { AdvancedFiltersSheet } from "@/components/AdvancedFiltersSheet";
 import { LogDetailsModal } from "@/components/LogDetailsModal";
 import { Base64ConverterModal } from "@/components/Base64ConverterModal";
+
+interface Base64WindowData {
+  id: string;
+  text: string;
+  isMinimized: boolean;
+  zIndex: number;
+}
 import {
   ContextMenu,
   ContextMenuContent,
@@ -69,8 +76,19 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
   const [copied, setCopied] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [base64ConverterOpen, setBase64ConverterOpen] = useState(false);
-  const [base64ConverterText, setBase64ConverterText] = useState("");
+  
+  const [base64Windows, setBase64Windows] = useState<Base64WindowData[]>([]);
+  const windowZIndexRef = useRef(100);
+
+  const addBase64Window = (text: string) => {
+    windowZIndexRef.current += 1;
+    setBase64Windows(prev => [...prev, { id: crypto.randomUUID(), text, isMinimized: false, zIndex: windowZIndexRef.current }]);
+  };
+
+  const bringToFront = (id: string) => {
+    windowZIndexRef.current += 1;
+    setBase64Windows(prev => prev.map(w => w.id === id ? { ...w, zIndex: windowZIndexRef.current } : w));
+  };
   
   // Selection Tooltip State
   const [selectionTooltip, setSelectionTooltip] = useState<{ x: number, y: number, text: string } | null>(null);
@@ -100,12 +118,8 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
       if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
         e.preventDefault();
         
-        const selection = window.getSelection()?.toString().trim();
-        if (selection) {
-          setBase64ConverterText(selection);
-        }
-        
-        setBase64ConverterOpen(true);
+        const selection = window.getSelection()?.toString().trim() || "";
+        addBase64Window(selection);
       }
       if (e.key === 'Escape') {
         if (selectedLog) setSelectedLog(null);
@@ -289,7 +303,7 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
           handleSearchKeyDown={handleSearchKeyDown}
           handleFileUpload={onFileInputChange}
           searchInputRef={searchInputRef}
-          onOpenBase64Converter={() => setBase64ConverterOpen(true)}
+          onOpenBase64Converter={() => addBase64Window("")}
         />
       )}
 
@@ -422,8 +436,7 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
                 onClick={() => {
                   const selected = window.getSelection()?.toString();
                   if (selected) {
-                    setBase64ConverterText(selected);
-                    setBase64ConverterOpen(true);
+                    addBase64Window(selected);
                   }
                 }}
               >
@@ -492,11 +505,42 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
         handleCopyPayload={handleCopyPayload}
       />
 
-      <Base64ConverterModal
-        isOpen={base64ConverterOpen}
-        onOpenChange={setBase64ConverterOpen}
-        initialText={base64ConverterText}
-      />
+      {base64Windows.filter(w => !w.isMinimized).map((win, i) => (
+        <Base64ConverterModal
+          key={win.id}
+          id={win.id}
+          initialText={win.text}
+          index={i}
+          zIndex={win.zIndex}
+          minIndex={0}
+          isMinimizedState={win.isMinimized}
+          onClose={(id) => setBase64Windows(prev => prev.filter(w => w.id !== id))}
+          onMinimizeChange={(id, isMinimized) => setBase64Windows(prev => prev.map(w => w.id === id ? { ...w, isMinimized } : w))}
+          onFocus={bringToFront}
+        />
+      ))}
+
+      <div className="fixed bottom-6 right-6 flex flex-col items-end group z-[100]">
+        {base64Windows.filter(w => w.isMinimized).map((win, i) => (
+          <div 
+            key={win.id} 
+            className="transition-all duration-300 w-64 -mt-8 group-hover:mt-2 first:mt-0"
+            style={{ zIndex: 100 - i }}
+          >
+            <Base64ConverterModal
+              id={win.id}
+              initialText={win.text}
+              index={0}
+              zIndex={win.zIndex}
+              minIndex={i}
+              isMinimizedState={win.isMinimized}
+              onClose={(id) => setBase64Windows(prev => prev.filter(w => w.id !== id))}
+              onMinimizeChange={(id, isMinimized) => setBase64Windows(prev => prev.map(w => w.id === id ? { ...w, isMinimized } : w))}
+              onFocus={bringToFront}
+            />
+          </div>
+        ))}
+      </div>
       
       {/* Floating Selection Tooltip */}
       {selectionTooltip && (
@@ -521,8 +565,7 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
           <button
             className="flex items-center gap-2 hover:bg-primary-foreground/20 px-2 py-1 rounded transition-colors"
             onClick={() => {
-              setBase64ConverterText(selectionTooltip.text);
-              setBase64ConverterOpen(true);
+              addBase64Window(selectionTooltip.text);
               setSelectionTooltip(null);
               window.getSelection()?.removeAllRanges();
             }}

@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Copy, ArrowRightLeft, AlertCircle, RefreshCcw } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { highlightSqlAndSearch } from "@/lib/highlight";
 
 interface Base64ConverterModalProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ export function Base64ConverterModal({
   const [mode, setMode] = useState<"decode" | "encode">("decode");
   const [error, setError] = useState<string | null>(null);
   
-  const outputRef = useRef<HTMLTextAreaElement>(null);
+  const [selectedText, setSelectedText] = useState("");
   const [hasSelection, setHasSelection] = useState(false);
 
   useEffect(() => {
@@ -78,20 +79,21 @@ export function Base64ConverterModal({
   };
 
   const handleSelect = () => {
-    if (outputRef.current) {
-      const { selectionStart, selectionEnd } = outputRef.current;
-      setHasSelection(selectionStart !== selectionEnd);
+    const sel = window.getSelection();
+    if (sel) {
+      const text = sel.toString().trim();
+      setSelectedText(text);
+      setHasSelection(text.length > 0);
     }
   };
 
   const handleDecodeSelection = () => {
-    if (outputRef.current) {
-      const { selectionStart, selectionEnd, value } = outputRef.current;
-      if (selectionStart !== selectionEnd) {
-        setInput(value.substring(selectionStart, selectionEnd).trim());
-        setMode("decode");
-        setHasSelection(false);
-      }
+    if (selectedText) {
+      setInput(selectedText);
+      setMode("decode");
+      setHasSelection(false);
+      setSelectedText("");
+      window.getSelection()?.removeAllRanges();
     }
   };
 
@@ -105,7 +107,7 @@ export function Base64ConverterModal({
               variant="outline"
               size="sm"
               onClick={toggleMode}
-              className="ml-auto"
+              className="ml-auto mr-6"
             >
               <ArrowRightLeft className="w-4 h-4 mr-2" />
               {mode === "decode" ? "Decoding Mode" : "Encoding Mode"}
@@ -163,16 +165,13 @@ export function Base64ConverterModal({
                 <span>{error}</span>
               </div>
             ) : (
-              <Textarea
-                ref={outputRef}
-                value={output}
-                readOnly
-                onSelect={handleSelect}
-                onClick={handleSelect}
+              <div
+                onMouseUp={handleSelect}
                 onKeyUp={handleSelect}
-                className="min-h-[120px] max-h-[300px] overflow-y-auto font-mono text-xs bg-muted/50 break-all whitespace-pre-wrap resize-none"
-                placeholder="Result will appear here..."
-              />
+                className="min-h-[120px] max-h-[300px] overflow-y-auto font-mono text-xs bg-muted/50 break-all whitespace-pre-wrap rounded-md border border-input p-2.5"
+              >
+                {output ? highlightSqlAndSearch(output, "", false) : <span className="text-muted-foreground">Result will appear here...</span>}
+              </div>
             )}
           </div>
         </div>

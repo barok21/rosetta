@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useLogFile, LogEntry } from "@/hooks/useLogFile";
 import { buttonVariants } from "@/components/ui/button";
-import { FileText, Upload, Search, ArrowRightLeft } from "lucide-react";
+import { FileText, Upload, Search, ArrowRightLeft, Code2 } from "lucide-react";
 
 import { LogTable } from "@/components/LogTable";
 import { cn } from "@/lib/utils";
@@ -96,6 +96,16 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
         }
         
         searchInputRef.current?.focus();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        
+        const selection = window.getSelection()?.toString().trim();
+        if (selection) {
+          setBase64ConverterText(selection);
+        }
+        
+        setBase64ConverterOpen(true);
       }
       if (e.key === 'Escape') {
         if (selectedLog) setSelectedLog(null);
@@ -491,18 +501,36 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
       {/* Floating Selection Tooltip */}
       {selectionTooltip && (
         <div 
-          className="fixed z-[100] transform -translate-x-1/2 -translate-y-full bg-primary text-primary-foreground px-3 py-1.5 rounded shadow-lg text-xs font-medium flex items-center gap-2 cursor-pointer hover:bg-primary/90 animate-in fade-in zoom-in-95 duration-200"
-          style={{ left: selectionTooltip.x, top: selectionTooltip.y }}
-          onClick={() => {
-            setSearchQuery(selectionTooltip.text);
-            searchInputRef.current?.focus();
-            setSelectionTooltip(null);
-            window.getSelection()?.removeAllRanges();
-          }}
+          className="fixed z-[100] transform -translate-x-1/2 -translate-y-full bg-primary text-primary-foreground p-1 rounded-md shadow-lg text-xs font-medium flex items-center gap-1 animate-in fade-in zoom-in-95 duration-200"
+          style={{ left: selectionTooltip.x, top: selectionTooltip.y - 8 }}
         >
-          <Search size={12} />
-          <span>Search for "{selectionTooltip.text.length > 15 ? selectionTooltip.text.substring(0, 15) + '...' : selectionTooltip.text}"</span>
-          <span className="opacity-60 text-[10px] ml-1 border-l border-primary-foreground/30 pl-2 hidden sm:inline-block">Ctrl+F</span>
+          <button
+            className="flex items-center gap-2 hover:bg-primary-foreground/20 px-2 py-1 rounded transition-colors"
+            onClick={() => {
+              setSearchQuery(selectionTooltip.text);
+              searchInputRef.current?.focus();
+              setSelectionTooltip(null);
+              window.getSelection()?.removeAllRanges();
+            }}
+          >
+            <Search size={12} />
+            <span>Search</span>
+            <span className="opacity-60 text-[10px] ml-1">Ctrl+F</span>
+          </button>
+          <div className="w-px h-4 bg-primary-foreground/30" />
+          <button
+            className="flex items-center gap-2 hover:bg-primary-foreground/20 px-2 py-1 rounded transition-colors"
+            onClick={() => {
+              setBase64ConverterText(selectionTooltip.text);
+              setBase64ConverterOpen(true);
+              setSelectionTooltip(null);
+              window.getSelection()?.removeAllRanges();
+            }}
+          >
+            <Code2 size={12} />
+            <span>Decode</span>
+            <span className="opacity-60 text-[10px] ml-1">Ctrl+D</span>
+          </button>
         </div>
       )}
     </div>

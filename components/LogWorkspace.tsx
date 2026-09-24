@@ -281,9 +281,6 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
           typeFilter={typeFilter}
           setTypeFilter={setTypeFilter}
           uniqueTypes={uniqueTypes}
-          uniqueStatuses={uniqueStatuses}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
           startDate={startDate}
           setStartDate={setStartDate}
           endDate={endDate}
@@ -299,7 +296,6 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
           setShowAdvanced={setShowAdvanced}
           hasActiveFilters={hasActiveFilters}
           clearFilters={clearFilters}
-          handleExportLogs={handleExportLogs}
           handleSearchKeyDown={handleSearchKeyDown}
           handleFileUpload={onFileInputChange}
           searchInputRef={searchInputRef}
@@ -319,6 +315,10 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
         uniqueMetadataValues={uniqueMetadataValues}
         metadataFilters={metadataFilters}
         setMetadataFilters={setMetadataFilters}
+        uniqueStatuses={uniqueStatuses}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        handleExportLogs={handleExportLogs}
       />
 
       {/* Main Content Area */}

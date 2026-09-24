@@ -27,9 +27,6 @@ interface LogToolbarProps {
   typeFilter: string;
   setTypeFilter: (v: string) => void;
   uniqueTypes: string[];
-  statusFilter: string;
-  setStatusFilter: (v: string) => void;
-  uniqueStatuses: string[];
   startDate: Date | undefined;
   setStartDate: (d: Date | undefined) => void;
   endDate: Date | undefined;
@@ -45,7 +42,6 @@ interface LogToolbarProps {
   setShowAdvanced: (v: boolean) => void;
   hasActiveFilters: boolean;
   clearFilters: () => void;
-  handleExportLogs: () => void;
   handleSearchKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
@@ -59,9 +55,6 @@ export function LogToolbar({
   typeFilter,
   setTypeFilter,
   uniqueTypes,
-  statusFilter,
-  setStatusFilter,
-  uniqueStatuses,
   startDate,
   setStartDate,
   endDate,
@@ -77,7 +70,6 @@ export function LogToolbar({
   setShowAdvanced,
   hasActiveFilters,
   clearFilters,
-  handleExportLogs,
   handleSearchKeyDown,
   handleFileUpload,
   searchInputRef,
@@ -90,8 +82,18 @@ export function LogToolbar({
           <>
             
             <Select value={levelFilter} onValueChange={(v) => setLevelFilter(v || 'ALL')}>
-              <SelectTrigger className="w-[120px] h-8">
-                <SelectValue placeholder="All Levels" />
+              <SelectTrigger className="w-[140px] h-8 bg-background border-input hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  {levelFilter === 'ALL' && <ListFilter size={14} className="opacity-70" />}
+                  {levelFilter === 'error' && <AlertCircle size={14} className="text-red-500" />}
+                  {levelFilter === 'warn' && <AlertTriangle size={14} className="text-amber-500" />}
+                  {levelFilter === 'info' && <Info size={14} className="text-blue-500" />}
+                  {levelFilter === 'debug' && <Bug size={14} className="text-purple-500" />}
+                  {levelFilter === 'fatal' && <Skull size={14} className="text-red-700" />}
+                  <span className="font-medium text-foreground truncate flex-1 text-left capitalize">
+                    {levelFilter === 'ALL' ? 'All Levels' : levelFilter}
+                  </span>
+                </div>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL"><div className="flex items-center gap-2"><ListFilter size={14} className="text-muted-foreground" /> All Levels</div></SelectItem>
@@ -104,8 +106,22 @@ export function LogToolbar({
             </Select>
 
             <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v || 'ALL')}>
-              <SelectTrigger className="w-[180px] h-8">
-                <SelectValue placeholder="All Types" />
+              <SelectTrigger className="w-[180px] h-8 bg-background border-input hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  {(() => {
+                    if (typeFilter === 'ALL') return <ListFilter size={14} className="opacity-70" />;
+                    const typeLower = typeFilter.toLowerCase();
+                    let TypeIcon = Tag;
+                    if (typeLower.includes('db') || typeLower.includes('sql') || typeLower.includes('query')) TypeIcon = Database;
+                    else if (typeLower.includes('api') || typeLower.includes('http') || typeLower.includes('web')) TypeIcon = Globe;
+                    else if (typeLower.includes('worker') || typeLower.includes('job') || typeLower.includes('task')) TypeIcon = Server;
+                    else if (typeLower.includes('auth') || typeLower.includes('login')) TypeIcon = Lock;
+                    return <TypeIcon size={14} className="opacity-70" />;
+                  })()}
+                  <span className="font-medium text-foreground truncate flex-1 text-left">
+                    {typeFilter === 'ALL' ? 'All Types' : typeFilter}
+                  </span>
+                </div>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL"><div className="flex items-center gap-2"><ListFilter size={14} className="text-muted-foreground" /> All Types</div></SelectItem>
@@ -126,25 +142,6 @@ export function LogToolbar({
                     </SelectItem>
                   );
                 })}
-              </SelectContent>
-            </Select>
-
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v || 'ALL')}>
-              <SelectTrigger className="w-[140px] h-8 bg-background border-input hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Activity size={14} className="opacity-70" />
-                  <span className="font-medium text-foreground truncate flex-1 text-left">
-                    {statusFilter === 'ALL' ? 'All Statuses' : statusFilter}
-                  </span>
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Statuses</SelectItem>
-                {uniqueStatuses.map(s => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
               </SelectContent>
             </Select>
 
@@ -237,16 +234,6 @@ export function LogToolbar({
           )}
           {logs.length > 0 && (
             <>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="h-8 gap-2 ml-1"
-                onClick={handleExportLogs}
-                title="Export filtered logs as JSON"
-              >
-                <Download size={14} />
-                Export
-              </Button>
               {onOpenBase64Converter && (
                 <Button
                   variant="outline"

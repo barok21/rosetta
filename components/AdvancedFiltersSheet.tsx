@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { X, Activity, Download } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Drawer,
@@ -41,6 +41,10 @@ interface AdvancedFiltersSheetProps {
   uniqueMetadataValues: Record<string, string[]>;
   metadataFilters: Record<string, string>;
   setMetadataFilters: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  uniqueStatuses: string[];
+  statusFilter: string;
+  setStatusFilter: (v: string) => void;
+  handleExportLogs: () => void;
 }
 
 export function AdvancedFiltersSheet({
@@ -53,7 +57,11 @@ export function AdvancedFiltersSheet({
   metadataKeys,
   uniqueMetadataValues,
   metadataFilters,
-  setMetadataFilters
+  setMetadataFilters,
+  uniqueStatuses,
+  statusFilter,
+  setStatusFilter,
+  handleExportLogs
 }: AdvancedFiltersSheetProps) {
   const isMobile = useIsMobile();
 
@@ -61,6 +69,7 @@ export function AdvancedFiltersSheet({
     setSearchOperator('AND');
     setExcludeQuery('');
     setMetadataFilters({});
+    setStatusFilter('ALL');
     setShowAdvanced(false);
   }
 
@@ -126,6 +135,41 @@ export function AdvancedFiltersSheet({
               <p className="text-xs text-muted-foreground">
                 Logs containing these exact terms will be hidden from the view.
               </p>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold tracking-tight">Status Filter</h3>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v || 'ALL')}>
+                <SelectTrigger className="w-full h-10 bg-background border-input hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Activity size={16} className="opacity-70" />
+                    <span className="font-medium text-foreground truncate flex-1 text-left">
+                      {statusFilter === 'ALL' ? 'All Statuses' : statusFilter}
+                    </span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Statuses</SelectItem>
+                  {uniqueStatuses.map(s => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold tracking-tight">Export</h3>
+              <Button 
+                variant="outline" 
+                className="w-full gap-2 h-10"
+                onClick={handleExportLogs}
+                title="Export filtered logs as JSON"
+              >
+                <Download size={16} />
+                Export Logs
+              </Button>
             </div>
 
             {metadataKeys.length > 0 && (

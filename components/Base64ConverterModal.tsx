@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Copy, ArrowRightLeft, AlertCircle } from "lucide-react";
+import { Copy, ArrowRightLeft, AlertCircle, RefreshCcw } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
 interface Base64ConverterModalProps {
@@ -25,6 +25,9 @@ export function Base64ConverterModal({
   const [output, setOutput] = useState("");
   const [mode, setMode] = useState<"decode" | "encode">("decode");
   const [error, setError] = useState<string | null>(null);
+  
+  const outputRef = useRef<HTMLTextAreaElement>(null);
+  const [hasSelection, setHasSelection] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -74,9 +77,27 @@ export function Base64ConverterModal({
     setInput(output); // Optionally swap input and output
   };
 
+  const handleSelect = () => {
+    if (outputRef.current) {
+      const { selectionStart, selectionEnd } = outputRef.current;
+      setHasSelection(selectionStart !== selectionEnd);
+    }
+  };
+
+  const handleDecodeSelection = () => {
+    if (outputRef.current) {
+      const { selectionStart, selectionEnd, value } = outputRef.current;
+      if (selectionStart !== selectionEnd) {
+        setInput(value.substring(selectionStart, selectionEnd).trim());
+        setMode("decode");
+        setHasSelection(false);
+      }
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] flex flex-col gap-4">
+      <DialogContent className="sm:max-w-4xl max-w-[90vw] flex flex-col gap-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Base64 Converter
@@ -103,7 +124,7 @@ export function Base64ConverterModal({
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              className="min-h-[120px] font-mono text-xs"
+              className="min-h-[120px] max-h-[300px] overflow-y-auto font-mono text-xs break-all whitespace-pre-wrap resize-none"
               placeholder={mode === "decode" ? "Paste Base64 here..." : "Paste plain text here..."}
             />
           </div>
@@ -112,15 +133,28 @@ export function Base64ConverterModal({
             <div className="flex justify-between items-end">
               <label className="text-sm font-medium">Output</label>
               {output && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCopy}
-                  className="h-6 px-2 text-xs"
-                >
-                  <Copy className="w-3 h-3 mr-1" />
-                  Copy
-                </Button>
+                <div className="flex items-center gap-2">
+                  {hasSelection && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleDecodeSelection}
+                      className="h-6 px-2 text-xs bg-primary/10 hover:bg-primary/20 text-primary"
+                    >
+                      <RefreshCcw className="w-3 h-3 mr-1" />
+                      Decode Selection
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopy}
+                    className="h-6 px-2 text-xs"
+                  >
+                    <Copy className="w-3 h-3 mr-1" />
+                    Copy
+                  </Button>
+                </div>
               )}
             </div>
             {error ? (
@@ -130,9 +164,13 @@ export function Base64ConverterModal({
               </div>
             ) : (
               <Textarea
+                ref={outputRef}
                 value={output}
                 readOnly
-                className="min-h-[120px] font-mono text-xs bg-muted/50"
+                onSelect={handleSelect}
+                onClick={handleSelect}
+                onKeyUp={handleSelect}
+                className="min-h-[120px] max-h-[300px] overflow-y-auto font-mono text-xs bg-muted/50 break-all whitespace-pre-wrap resize-none"
                 placeholder="Result will appear here..."
               />
             )}

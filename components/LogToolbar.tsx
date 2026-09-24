@@ -14,7 +14,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Activity, Search, Upload, X, Settings2, Calendar as CalendarIcon, Download, AlertCircle, AlertTriangle, Info, Bug, Skull, ListFilter, Tag, Database, Globe, Server, Lock } from "lucide-react";
+import { Activity, Search, Upload, X, Settings2, Calendar as CalendarIcon, Download, AlertCircle, AlertTriangle, Info, Bug, Skull, ListFilter, Tag, Database, Globe, Server, Lock, Code2 } from "lucide-react";
 import { format } from "date-fns";
 import { type DateRange } from "react-day-picker";
 import { cn } from "cn";
@@ -49,6 +49,7 @@ interface LogToolbarProps {
   handleSearchKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
+  onOpenBase64Converter?: () => void;
 }
 
 export function LogToolbar({
@@ -79,7 +80,8 @@ export function LogToolbar({
   handleExportLogs,
   handleSearchKeyDown,
   handleFileUpload,
-  searchInputRef
+  searchInputRef,
+  onOpenBase64Converter,
 }: LogToolbarProps) {
   return (
     <div className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
@@ -234,16 +236,30 @@ export function LogToolbar({
             </Button>
           )}
           {logs.length > 0 && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="h-8 gap-2 ml-1"
-              onClick={handleExportLogs}
-              title="Export filtered logs as JSON"
-            >
-              <Download size={14} />
-              Export
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 gap-2 ml-1"
+                onClick={handleExportLogs}
+                title="Export filtered logs as JSON"
+              >
+                <Download size={14} />
+                Export
+              </Button>
+              {onOpenBase64Converter && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-2 ml-1 hidden lg:flex"
+                  onClick={onOpenBase64Converter}
+                  title="Open Base64 Converter"
+                >
+                  <Code2 size={14} />
+                  Base64
+                </Button>
+              )}
+            </>
           )}
         </div>
       )}

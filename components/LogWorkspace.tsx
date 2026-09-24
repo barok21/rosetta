@@ -279,6 +279,7 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
           handleSearchKeyDown={handleSearchKeyDown}
           handleFileUpload={onFileInputChange}
           searchInputRef={searchInputRef}
+          onOpenBase64Converter={() => setBase64ConverterOpen(true)}
         />
       )}
 

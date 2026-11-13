@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import React from "react";
 import { useTheme } from "@wrksz/themes/client";
 import { buttonVariants, Button } from "@/components/ui/button";
@@ -49,31 +49,12 @@ const COMPARE_TAB_ID = '__compare__';
 const SESSIONS_STORAGE_KEY = 'rosetta_sessions';
 
 export default function LogReaderApp() {
-  const [sessions, setSessions] = useState<LogSession[]>(() => {
-    // Restore session list from localStorage on first render
-    try {
-      const stored = localStorage.getItem(SESSIONS_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as Array<{ id: string; name: string }>;
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map(s => ({ id: s.id, name: s.name, file: null }));
-        }
-      }
-    } catch {}
-    return [{ id: 'default', name: 'New Session', file: null }];
-  });
-  const [activeSessionId, setActiveSessionId] = useState<string>(
-    () => {
-      try {
-        const stored = localStorage.getItem(SESSIONS_STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored) as Array<{ id: string; name: string }>;
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed[0].id;
-        }
-      } catch {}
-      return 'default';
-    }
-  );
+  // Always initialize with defaults so SSR and first client render match (avoids hydration error).
+  // localStorage is read in a useEffect after hydration.
+  const [sessions, setSessions] = useState<LogSession[]>([
+    { id: 'default', name: 'New Session', file: null }
+  ]);
+  const [activeSessionId, setActiveSessionId] = useState<string>('default');
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
@@ -84,8 +65,29 @@ export default function LogReaderApp() {
     setSessionLogs(prev => ({ ...prev, [id]: logs }));
   }, []);
 
-  // Persist session list to localStorage whenever it changes
+  // Restore session list from localStorage after hydration
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SESSIONS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as Array<{ id: string; name: string }>;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSessions(parsed.map(s => ({ id: s.id, name: s.name, file: null })));
+          setActiveSessionId(parsed[0].id);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Persist session list whenever it changes.
+  // Skip the very first run (default state) so we don't overwrite localStorage
+  // before the restoration effect above has had a chance to fire.
+  const isFirstMountRef = useRef(true);
+  useEffect(() => {
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      return;
+    }
     localStorage.setItem(
       SESSIONS_STORAGE_KEY,
       JSON.stringify(sessions.map(s => ({ id: s.id, name: s.name }))),

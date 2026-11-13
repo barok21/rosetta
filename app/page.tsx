@@ -8,6 +8,7 @@ import { Upload, Moon, Sun, Monitor, X, Plus, GitCompare } from "lucide-react";
 import { LogWorkspace } from "@/components/LogWorkspace";
 import { LogComparePanel } from "@/components/LogComparePanel";
 import type { LogEntry } from "@/hooks/useLogFile";
+import { deleteLogContent } from "@/lib/sessionStore";
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -45,12 +46,34 @@ interface LogSession {
 }
 
 const COMPARE_TAB_ID = '__compare__';
+const SESSIONS_STORAGE_KEY = 'rosetta_sessions';
 
 export default function LogReaderApp() {
-  const [sessions, setSessions] = useState<LogSession[]>([
-    { id: 'default', name: 'New Session', file: null }
-  ]);
-  const [activeSessionId, setActiveSessionId] = useState<string>('default');
+  const [sessions, setSessions] = useState<LogSession[]>(() => {
+    // Restore session list from localStorage on first render
+    try {
+      const stored = localStorage.getItem(SESSIONS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as Array<{ id: string; name: string }>;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(s => ({ id: s.id, name: s.name, file: null }));
+        }
+      }
+    } catch {}
+    return [{ id: 'default', name: 'New Session', file: null }];
+  });
+  const [activeSessionId, setActiveSessionId] = useState<string>(
+    () => {
+      try {
+        const stored = localStorage.getItem(SESSIONS_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored) as Array<{ id: string; name: string }>;
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed[0].id;
+        }
+      } catch {}
+      return 'default';
+    }
+  );
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
@@ -60,6 +83,14 @@ export default function LogReaderApp() {
   const updateSessionLogs = useCallback((id: string, logs: LogEntry[]) => {
     setSessionLogs(prev => ({ ...prev, [id]: logs }));
   }, []);
+
+  // Persist session list to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(
+      SESSIONS_STORAGE_KEY,
+      JSON.stringify(sessions.map(s => ({ id: s.id, name: s.name }))),
+    );
+  }, [sessions]);
 
   const handleGlobalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -88,7 +119,8 @@ export default function LogReaderApp() {
   };
 
   const closeSession = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // prevent selecting the tab
+    e.stopPropagation();
+    deleteLogContent(id).catch(console.error); // remove persisted file content
     setSessions(prev => {
       const next = prev.filter(s => s.id !== id);
       if (next.length === 0) {
@@ -213,6 +245,7 @@ export default function LogReaderApp() {
       {sessions.map(session => (
         <LogWorkspace 
           key={session.id}
+          sessionId={session.id}
           sessionFile={session.file}
           isActive={activeSessionId === session.id && !isCompareActive}
           onSessionReady={(name) => updateSessionName(session.id, name)}

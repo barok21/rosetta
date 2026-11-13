@@ -44,13 +44,14 @@ import {
 import { MoreVertical } from "lucide-react";
 
 interface LogWorkspaceProps {
+  sessionId: string;
   sessionFile: File | null;
   isActive: boolean;
   onSessionReady?: (filename: string) => void;
   onLogsChange?: (logs: LogEntry[]) => void;
 }
 
-export function LogWorkspace({ sessionFile, isActive, onSessionReady, onLogsChange }: LogWorkspaceProps) {
+export function LogWorkspace({ sessionId, sessionFile, isActive, onSessionReady, onLogsChange }: LogWorkspaceProps) {
   const {
     logs, fileMeta, loadingStatus,
     levelFilter, setLevelFilter,
@@ -70,7 +71,7 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady, onLogsChan
     levelStats,
     filteredLogs, currentLogs,
     handleFileUpload, clearLog, clearFilters
-  } = useLogFile(sessionFile);
+  } = useLogFile(sessionFile, sessionId);
 
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);

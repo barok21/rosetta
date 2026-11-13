@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useDebounce } from './useDebounce';
+import { saveLogContent, loadLogContent } from '@/lib/sessionStore';
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'fatal' | 'unknown';
 
@@ -106,7 +107,7 @@ export function parseStructuredLog(lineStr: string, index: number): LogEntry {
   return parsed;
 }
 
-export function useLogFile(initialFile: File | null = null) {
+export function useLogFile(initialFile: File | null = null, sessionId?: string) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [fileMeta, setFileMeta] = useState<{name: string, sizeMB: string} | null>(null);
   const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
@@ -144,6 +145,11 @@ export function useLogFile(initialFile: File | null = null) {
       
       // We filter out any empty trailing lines
       const displayLines = lines.filter(line => line.trim().length > 0);
+
+      // Persist to IndexedDB so the file survives a page refresh
+      if (sessionId) {
+        saveLogContent(sessionId, file.name, text).catch(console.error);
+      }
       
       setLoadingStatus(`Parsing ${displayLines.length.toLocaleString()} lines in background...`);
       
@@ -167,14 +173,37 @@ export function useLogFile(initialFile: File | null = null) {
       worker.postMessage({ lines: displayLines, startIndex: 0 });
     };
     reader.readAsText(file);
-  }, []);
+  }, [sessionId]);
 
   useEffect(() => {
     if (initialFile) {
       handleFileUpload(initialFile);
+      return;
     }
+    // No initial File object — try restoring from IndexedDB (page refresh case)
+    if (!sessionId) return;
+    loadLogContent(sessionId).then(stored => {
+      if (!stored) return;
+      const sizeMB = (stored.content.length / 1024 / 1024).toFixed(2);
+      setFileMeta({ name: stored.filename, sizeMB });
+      setLoadingStatus(`Restoring ${stored.filename}...`);
+      const lines = stored.content.split(/\r?\n/).filter(l => l.trim().length > 0);
+      setLoadingStatus(`Parsing ${lines.length.toLocaleString()} lines in background...`);
+      const worker = new Worker(new URL('../workers/logParser.worker.ts', import.meta.url));
+      worker.onmessage = (e) => {
+        setLogs(e.data.parsedLogs);
+        setLoadingStatus(null);
+        setCurrentPage(1);
+        worker.terminate();
+      };
+      worker.onerror = () => {
+        setLoadingStatus('Error restoring file');
+        worker.terminate();
+      };
+      worker.postMessage({ lines, startIndex: 0 });
+    }).catch(console.error);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount if initialFile is provided
+  }, []); // Only run once on mount
 
   const clearLog = useCallback(() => {
     setLogs([]);

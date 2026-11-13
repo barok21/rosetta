@@ -466,21 +466,7 @@ export function LogComparePanel({ sessions }: LogComparePanelProps) {
         </div>
       )}
 
-      {/* ── Identical — no diff rows to show ───────────────────────────────── */}
-      {canCompare && status === "done" && stats?.identical && (
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-12 gap-4">
-          <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shadow-inner">
-            <CheckCircle2 size={36} />
-          </div>
-          <div className="max-w-sm">
-            <h3 className="text-lg font-semibold mb-1 text-emerald-500">Perfect Match</h3>
-            <p className="text-sm text-muted-foreground">
-              Both files contain exactly the same{" "}
-              {stats.totalA.toLocaleString()} lines in the same order.
-            </p>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

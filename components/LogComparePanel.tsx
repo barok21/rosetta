@@ -200,14 +200,17 @@ function StatChip({ label, value, color }: { label: string; value: number | stri
 
 // ─── Level Badge ──────────────────────────────────────────────────────────────
 
+type LevelKey = keyof ReturnType<typeof levelStats>;
+
 function LevelBar({ label, statsA, statsB }: { label: string; statsA: ReturnType<typeof levelStats>; statsB: ReturnType<typeof levelStats> }) {
-  const levels: { key: keyof ReturnType<typeof levelStats>; color: string; dot: string }[] = [
+  type LevelDef = { key: LevelKey; color: string; dot: string };
+  const levels: LevelDef[] = ([
     { key: "fatal", color: "text-red-700", dot: "bg-red-700" },
     { key: "error", color: "text-red-500", dot: "bg-red-500" },
     { key: "warn",  color: "text-amber-500", dot: "bg-amber-500" },
     { key: "info",  color: "text-blue-500", dot: "bg-blue-500" },
     { key: "debug", color: "text-purple-500", dot: "bg-purple-500" },
-  ].filter(l => statsA[l.key] > 0 || statsB[l.key] > 0);
+  ] as LevelDef[]).filter((l) => statsA[l.key] > 0 || statsB[l.key] > 0);
 
   if (levels.length === 0) return null;
 

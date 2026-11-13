@@ -47,9 +47,10 @@ interface LogWorkspaceProps {
   sessionFile: File | null;
   isActive: boolean;
   onSessionReady?: (filename: string) => void;
+  onLogsChange?: (logs: LogEntry[]) => void;
 }
 
-export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorkspaceProps) {
+export function LogWorkspace({ sessionFile, isActive, onSessionReady, onLogsChange }: LogWorkspaceProps) {
   const {
     logs, fileMeta, loadingStatus,
     levelFilter, setLevelFilter,
@@ -100,6 +101,15 @@ export function LogWorkspace({ sessionFile, isActive, onSessionReady }: LogWorks
       onSessionReady(fileMeta.name);
     }
   }, [fileMeta?.name, onSessionReady]);
+
+  // Lift parsed logs to parent for the Compare feature
+  const prevLogsLengthRef = useRef<number>(-1);
+  useEffect(() => {
+    if (onLogsChange && logs.length !== prevLogsLengthRef.current) {
+      prevLogsLengthRef.current = logs.length;
+      onLogsChange(logs);
+    }
+  }, [logs, onLogsChange]);
 
   // Keyboard shortcuts and Selection logic
   useEffect(() => {

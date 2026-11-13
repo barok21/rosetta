@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import React from "react";
 import { useTheme } from "@wrksz/themes/client";
 import { buttonVariants, Button } from "@/components/ui/button";
-import { Upload, Moon, Sun, Monitor, X, Plus } from "lucide-react";
+import { Upload, Moon, Sun, Monitor, X, Plus, GitCompare } from "lucide-react";
 import { LogWorkspace } from "@/components/LogWorkspace";
+import { LogComparePanel } from "@/components/LogComparePanel";
+import type { LogEntry } from "@/hooks/useLogFile";
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -42,6 +44,8 @@ interface LogSession {
   file: File | null;
 }
 
+const COMPARE_TAB_ID = '__compare__';
+
 export default function LogReaderApp() {
   const [sessions, setSessions] = useState<LogSession[]>([
     { id: 'default', name: 'New Session', file: null }
@@ -49,6 +53,13 @@ export default function LogReaderApp() {
   const [activeSessionId, setActiveSessionId] = useState<string>('default');
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+
+  // Parsed logs per session — lifted up from LogWorkspace for the Compare feature
+  const [sessionLogs, setSessionLogs] = useState<Record<string, LogEntry[]>>({});
+
+  const updateSessionLogs = useCallback((id: string, logs: LogEntry[]) => {
+    setSessionLogs(prev => ({ ...prev, [id]: logs }));
+  }, []);
 
   const handleGlobalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -101,6 +112,8 @@ export default function LogReaderApp() {
       return prev.map(s => s.id === id ? { ...s, name: newName } : s);
     });
   }, []);
+
+  const isCompareActive = activeSessionId === COMPARE_TAB_ID;
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden font-sans">
@@ -163,6 +176,20 @@ export default function LogReaderApp() {
             >
               <Plus size={16} />
             </button>
+
+            {/* Compare Tab — always pinned at the end */}
+            <button
+              onClick={() => setActiveSessionId(COMPARE_TAB_ID)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-sm transition-all shrink-0 ml-1 border ${
+                isCompareActive
+                  ? 'bg-background shadow-sm text-foreground font-medium border-border/50'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/80 border-transparent'
+              }`}
+              title="Compare two log files"
+            >
+              <GitCompare size={14} />
+              <span>Compare</span>
+            </button>
           </div>
         </div>
 
@@ -187,10 +214,25 @@ export default function LogReaderApp() {
         <LogWorkspace 
           key={session.id}
           sessionFile={session.file}
-          isActive={activeSessionId === session.id}
+          isActive={activeSessionId === session.id && !isCompareActive}
           onSessionReady={(name) => updateSessionName(session.id, name)}
+          onLogsChange={(logs) => updateSessionLogs(session.id, logs)}
         />
       ))}
+
+      {/* Compare Panel */}
+      {isCompareActive && (
+        <LogComparePanel
+          sessions={sessions
+            .filter(s => (sessionLogs[s.id]?.length ?? 0) > 0)
+            .map(s => ({
+              id: s.id,
+              name: s.name,
+              logs: sessionLogs[s.id] ?? [],
+            }))
+          }
+        />
+      )}
     </div>
   );
 }
